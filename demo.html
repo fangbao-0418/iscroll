@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <script src="js/jquery-1.8.3.min.js"></script>
+
+    <script src="bower_components/ejs/ejs.js"></script>
+
+    <script type="text/template" id="list">
+        <% for(var i=0; i < list.length ; i++){ %>
+        <li class="ui-li-has-thumb">
+            <a href="#" class="ui-btn ui-btn-icon-right ui-icon-carat-r">
+                <img src="<%= list[i]['sptp'][0] %>">
+                <h2><%= list[i]['title'] %></h2>
+                <p><%= list[i]['sptym'] %></p>
+            </a>
+        </li>
+        <% } %>
+    </script>
+
+    <script>
+        $.ajax(
+                {
+                    type: 'get',
+                    url: 'http://www.ey99.com/api/vip2/json.php?username=ffcffc&page=1&callback=jsonp',
+                    dataType: 'jsonp',
+                    jsonp: "callback",
+                    async: true,
+                    success: function (data) {
+                        var listHtml = $('#list').html();
+                        var html = ejs.render(listHtml, {list:data.list});
+                        localStorage.total = data.count;
+                        $("#listview").html(html);
+                    },
+                    error: function () {
+                        alert('fail');
+                    }
+                }
+        );
+
+     function getlist(page){
+         $.ajax(
+                 {
+                     type: 'get',
+                     url: 'http://www.ey99.com/api/vip2/json.php?username=ffcffc&page='+page+'&callback=jsonp',
+                     dataType: 'jsonp',
+                     jsonp: "callback",
+                     async: true,
+                     success: function (data) {
+
+
+                         var listHtml = $('#list').html();
+
+                         var html = ejs.render(listHtml, {list:data.list});
+
+                         html = $("#listview").html() + html;
+                         localStorage.total = data.count;
+
+                         $("#listview").html(html);
+
+                     },
+                     error: function () {
+                         alert('fail');
+                     }
+                 }
+         );
+     }
+    </script>
+    <script>
+        $(document).ready(function(){
+
+            localStorage.page = 1;
+
+        });
+        $(document).on("pageinit","#pageone",function(){
+            $(document).on("scrollstop",function(){
+                //alert("停止滚动！");
+            });
+        });
+    </script>
+    <link rel="stylesheet" href="jquery.mobile-1.4.5/demos/css/themes/default/jquery.mobile-1.4.5.min.css">
+    <script type="text/javascript" src="js/iscroll.js"></script>
+
+    <script type="text/javascript">
+
+        var myScroll,
+                pullDownEl, pullDownOffset,
+                pullUpEl, pullUpOffset,
+                generatedCount = 0;
+
+        function pullDownAction () {
+            setTimeout(function () {	// <-- Simulate network congestion, remove setTimeout from production!
+                var el, li, i;
+
+                myScroll.refresh();		// Remember to refresh when contents are loaded (ie: on ajax completion)
+            }, 2000);	// <-- Simulate network congestion, remove setTimeout from production!
+        }
+
+        function pullUpAction () {
+            setTimeout(function () {	// <-- Simulate network congestion, remove setTimeout from production!
+                var el, li, i;
+
+
+                myScroll.refresh();		// Remember to refresh when contents are loaded (ie: on ajax completion)
+            }, 2000);	// <-- Simulate network congestion, remove setTimeout from production!
+        }
+
+        function loaded() {
+            pullDownEl = document.getElementById('pullDown');
+            pullDownOffset = pullDownEl.offsetHeight;
+
+
+            pullUpEl = document.getElementById('pullUp');
+            pullUpOffset = pullUpEl.offsetHeight;
+            console.log(pullDownOffset)
+            myScroll = new iScroll('wrapper', {
+                useTransition: true,
+                topOffset: pullDownOffset,
+                onRefresh: function () {
+                    if (pullDownEl.className.match('loading')) {
+                        pullDownEl.className = '';
+                        pullDownEl.querySelector('.pullDownLabel').innerHTML = '加载完毕';
+                    } else if (pullUpEl.className.match('loading')) {
+                        pullUpEl.className = '';
+
+                        localStorage.page = localStorage.page ? parseInt(localStorage.page)+1:1;
+                        console.log(localStorage.page);
+                        if(localStorage.page < localStorage.total){
+                            getlist(localStorage.page);
+                        }
+
+                        if(localStorage.page < localStorage.total){
+                            pullUpEl.querySelector('.pullUpLabel').innerHTML = '加载完毕';
+                        }else{
+                            pullUpEl.querySelector('.pullUpLabel').innerHTML = '暂无数据';
+                        }
+
+                    }
+                },
+                onScrollMove: function () {
+
+                    console.log(this+"this.y:"+this.y);
+                    if (this.y > 5 && !pullDownEl.className.match('flip')) {
+                        pullDownEl.className = 'flip';
+                        pullDownEl.querySelector('.pullDownLabel').innerHTML = 'Release to refresh...';
+                        this.minScrollY = 0;
+                    } else if (this.y < 5 && pullDownEl.className.match('flip')) {
+                        pullDownEl.className = '';
+                        pullDownEl.querySelector('.pullDownLabel').innerHTML = 'Pull down to refresh...';
+                        this.minScrollY = -pullDownOffset;
+                    } else if (this.y < (this.maxScrollY - 5) && !pullUpEl.className.match('flip')) {
+                        pullUpEl.className = 'flip';
+                        pullUpEl.querySelector('.pullUpLabel').innerHTML = '向上滑动加载数据';
+                        this.maxScrollY = this.maxScrollY;
+                    } else if (this.y > (this.maxScrollY + 5) && pullUpEl.className.match('flip')) {
+                        pullUpEl.className = '';
+                        pullUpEl.querySelector('.pullUpLabel').innerHTML = 'Pull up to load more...';
+                        this.maxScrollY = pullUpOffset;
+                    }
+                },
+                onScrollEnd: function () {
+                    if (pullDownEl.className.match('flip')) {
+                        pullDownEl.className = 'loading';
+                        pullDownEl.querySelector('.pullDownLabel').innerHTML = '加载中...';
+                        pullDownAction();	// Execute custom function (ajax call?)
+                    } else if (pullUpEl.className.match('flip')) {
+                        pullUpEl.className = 'loading';
+                        pullUpEl.querySelector('.pullUpLabel').innerHTML = '加载中...';
+
+
+
+                        pullUpAction();	// Execute custom function (ajax call?)
+                    }
+                }
+            });
+
+            setTimeout(function () { document.getElementById('wrapper').style.left = '0'; }, 800);
+        }
+
+        document.addEventListener('touchmove', function (e) { e.preventDefault(); }, false);
+
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(loaded, 200); }, false);
+    </script>
+
+    <style type="text/css" media="all">
+        body,ul,li {
+
+        }
+
+
+        #wrapper {
+            position:absolute; z-index:1;
+            top:0px; bottom:0px; left:-9999px;
+            width:100%;
+
+            overflow:auto;
+        }
+
+        #scroller {
+            position:absolute; z-index:1;
+            /*	-webkit-touch-callout:none;*/
+            -webkit-tap-highlight-color:rgba(0,0,0,0);
+            width:100%;
+            padding:0;
+        }
+
+
+
+        #myFrame {
+            position:absolute;
+            top:0; left:0;
+        }
+
+
+
+        /**
+         *
+         * Pull down styles
+         *
+         */
+        #pullDown{
+            margin:0px -1em;
+            float: left;
+            height:40px;
+            line-height:40px;
+            padding:5px 10px;
+            margin-top: -20px;
+            font-weight:bold;
+            font-size:14px;
+            color:#888;
+            width: 100%;
+        }
+        #pullUp {
+            margin:1em -1em -1em -1em;
+            float: left;
+            height:40px;
+            line-height:40px;
+            padding:5px 10px;
+
+            font-weight:bold;
+            font-size:14px;
+            color:#888;
+            width: 100%;
+        }
+        #pullDown .pullDownIcon, #pullUp .pullUpIcon  {
+            display:block; float:left;
+            width:40px;
+            height: 40px;
+            background:url(pull-icon@2x.png) 0 0 no-repeat;
+            -webkit-background-size:40px 80px; background-size:40px 80px;
+            -webkit-transition-property:-webkit-transform;
+            -webkit-transition-duration:250ms;
+        }
+        #pullDown .pullDownIcon {
+            -webkit-transform:rotate(0deg) translateZ(0);
+        }
+        #pullUp .pullUpIcon  {
+            -webkit-transform:rotate(-180deg) translateZ(0);
+        }
+
+        #pullDown.flip .pullDownIcon {
+            -webkit-transform:rotate(-180deg) translateZ(0);
+        }
+
+        #pullUp.flip .pullUpIcon {
+            -webkit-transform:rotate(0deg) translateZ(0);
+        }
+
+        #pullDown.loading .pullDownIcon, #pullUp.loading .pullUpIcon {
+            background-position:0 100%;
+            -webkit-transform:rotate(0deg) translateZ(0);
+            -webkit-transition-duration:0ms;
+
+            -webkit-animation-name:loading;
+            -webkit-animation-duration:2s;
+            -webkit-animation-iteration-count:infinite;
+            -webkit-animation-timing-function:linear;
+        }
+
+        @-webkit-keyframes loading {
+            from { -webkit-transform:rotate(0deg) translateZ(0); }
+            to { -webkit-transform:rotate(360deg) translateZ(0); }
+        }
+
+        .ui-listview .ui-li-has-thumb>img:first-child, .ui-listview .ui-li-has-thumb>.ui-btn>img:first-child, .ui-listview .ui-li-has-thumb .ui-li-thumb {
+            height: 5em;
+            width: 5em;
+        }
+    </style>
+</head>
+<body>
+
+<div data-role="page" id="pageone">
+
+    <div id="wrapper">
+        <div id="scroller">
+    <div data-role="content">
+
+                <div id="pullDown">
+                    <span class="pullDownIcon"></span><span class="pullDownLabel">Pull down to refresh...</span>
+                </div>
+
+                <ul data-role="listview" id="listview">
+                    <li>
+                        <a href="#">
+                            <img src="http://ylqx.qgyyzs.net/upload/2014-12/HzpzsDim_2014122310181010.jpg">
+                            <h2>Google Chrome</h2>
+                            <p>Google Chrome 免费的开源 web 浏览器。发布于 2008 年。</p>
+                        </a>
+                    </li>
+                </ul>
+                <div style="clear:both"></div>
+                <div id="pullUp">
+                    <span class="pullUpIcon"></span><span class="pullUpLabel">Pull up to refresh...</span>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+<script src="jquery.mobile-1.4.5/demos/js/jquery.mobile-1.4.5.min.js"></script>
+</body>
+</html>
